@@ -9,13 +9,7 @@ from keras.layers import Flatten, Dense, Lambda
 from keras.layers.convolutional import Convolution2D, Cropping2D
 from keras.layers.pooling import MaxPooling2D
 from sklearn.model_selection import train_test_split
-<<<<<<< HEAD
-<<<<<<< HEAD
 from sklearn.utils import shuffle
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
 
 lines = []
 #with open('../data/driving_log.csv', 'r', newline='') as csvfile:
@@ -38,56 +32,26 @@ def generator(samples, batch_size=32):
             images = []
             angles = []
             for batch_sample in batch_samples:
-<<<<<<< HEAD
-<<<<<<< HEAD
                 name = '../data/IMG/'+batch_sample[0].split('/')[-1]
-=======
-                name = './IMG/'+batch_sample[0].split('/')[-1]
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
-                name = './IMG/'+batch_sample[0].split('/')[-1]
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
                 center_image = cv2.imread(name)
                 center_angle = float(batch_sample[3])
                 images.append(center_image)
                 angles.append(center_angle)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
             #TODO: trim image to only see section with road
-=======
-            # trim image to only see section with road
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
-            # trim image to only see section with road
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
             X_train = np.array(images)
             y_train = np.array(angles)
             yield sklearn.utils.shuffle(X_train, y_train)
 
 # compile and train the model using the generator function
-<<<<<<< HEAD
-<<<<<<< HEAD
 train_generator = generator(train_samples, batch_size=16)
 validation_generator = generator(validation_samples, batch_size=16)
-=======
-train_generator = generator(train_samples, batch_size=32)
-validation_generator = generator(validation_samples, batch_size=32)
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
-train_generator = generator(train_samples, batch_size=32)
-validation_generator = generator(validation_samples, batch_size=32)
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-
 ch, row, col = 3, 160, 320  # Trimmed image format
 
 #model
 model = Sequential()
-<<<<<<< HEAD
-<<<<<<< HEAD
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
 model.add(Lambda(lambda x: (x-128)/128))
-#model.add(Cropping2D(cropping=((70,25),(0,0))))
 model.add(Convolution2D(16,3,3, 
 	activation='relu', 
 	border_mode= 'same'))
@@ -102,29 +66,7 @@ model.add(Convolution2D(32,3,3,
 	activation='relu',
 	border_mode='same'))
 model.add(MaxPooling2D())
-=======
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-model.add(Lambda(lambda x: (x-128)/128,input_shape = (ch, row, col),output_shape = (ch, row, col)))
-#model.add(Cropping2D(cropping=((70,25),(0,0))))
-model.add(Convolution2D(32,3,3, 
-	activation='relu', 
-	border_mode= 'same'))
-model.add(Convolution2D(32,3,3,
-	activation='relu',
-	border_mode='same'))
-#model.add(MaxPooling2D())
-model.add(Convolution2D(64,3,3, 
-	activation='relu',
-	border_mode='same'))
-model.add(Convolution2D(64,3,3, 
-	activation='relu',
-	border_mode='same'))
-#model.add(MaxPooling2D())
-<<<<<<< HEAD
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
+
 model.add(Flatten())
 model.add(Dense(120))
 model.add(Dense(84))
@@ -132,9 +74,6 @@ model.add(Dense(1))
 
 #train
 model.compile(loss='mse', optimizer='adam')
-<<<<<<< HEAD
-<<<<<<< HEAD
-
 
 #If the above code throw exceptions, try : 
 model.fit_generator(train_generator, steps_per_epoch= len(train_samples),
@@ -154,10 +93,6 @@ model.fit_generator(train_generator,
 <<<<<<< HEAD
 <<<<<<< HEAD
 """
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
 
 model.save('model.h5')
 
