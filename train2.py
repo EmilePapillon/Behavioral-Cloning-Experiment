@@ -33,12 +33,23 @@ def generator(samples, batch_size=32):
             angles = []
             for batch_sample in batch_samples:
                 name = '../data/IMG/'+batch_sample[0].split('/')[-1]
-                center_image = cv2.imread(name)
-                center_angle = float(batch_sample[3])
-                images.append(center_image)
+                
+		center_image = cv2.imread(name)
+                center_angle = float(batch_sample[3])	
+		images.append(center_image)
                 angles.append(center_angle)
+		
+		left_image = cv2.imread(name)
+                left_angle = float(batch_sample[3])	
+		images.append(left_image)
+                angles.append(left_angle)
 
-            #TODO: trim image to only see section with road
+		right_image = cv2.imread(name)
+                right_angle = float(batch_sample[3])	
+		images.append(center_image)
+                angles.append(center_angle)
+            
+		#TODO: trim image to only see section with road
             X_train = np.array(images)
             y_train = np.array(angles)
             yield sklearn.utils.shuffle(X_train, y_train)
@@ -94,7 +105,7 @@ model.fit_generator(train_generator,
 <<<<<<< HEAD
 """
 
-model.save('model.h5')
+model.save('../model.h5')
 
 '''
 from keras.models import Model
