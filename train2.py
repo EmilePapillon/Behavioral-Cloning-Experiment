@@ -1,3 +1,5 @@
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4:
+
 import cv2
 import numpy as np
 import tensorflow as tf
@@ -18,7 +20,7 @@ with open('../data/driving_log.csv') as csvfile:
 		lines.append(line)
 
 #returns a numpy array that is a copy of the input array with a new row of zeros at its end
-def appendARowOfZeros(array)
+def appendARowOfZeros(array):
 	__array = np.zeros(array.shape[0], array.shape[1]+1) 
 	__array[:,0:array.shape[1]] = array
 	return __array
@@ -48,27 +50,25 @@ train_samples, validation_samples = train_test_split(lines, test_size= 0.2)
 #TODO :make sure samples are shuffled somewhere in the process
 
 def generator(samples, batch_size=10):
-    num_samples = len(samples)
-    while 1: # Loop forever so the generator never terminates
         
-        for offset in range(0, num_samples, batch_size):
-            batch_samples = samples[offset:offset+batch_size]
-
-            images = []
-            angles = []
-            for batch_sample in batch_samples:
-
-		    name = '../data/IMG/'+batch_sample[0].split('/')[-1]
-
-		    image = cv2.imread(name)
-		    angle = float(batch_sample[1])
-		    if bool(batch_sample[2]): image = np.fliplr(image) # if this is one of the inverted samples, we must now invert the image
-		    images.append(image)
-		    angles.append(angle)
-
-            X_train = np.array(images)
-            y_train = np.array(angles)
-            yield sklearn.utils.shuffle(X_train, y_train)
+	num_samples = len(samples)
+	while 1: # Loop forever so the generator never terminates
+		for offset in range(0, num_samples, batch_size):
+			batch_samples = samples[offset:offset+batch_size]
+            		images = []
+            		angles = []
+			
+			for batch_sample in batch_samples:
+				name = '../data/IMG/'+batch_sample[0].split('/')[-1]
+				image = cv2.imread(name)
+				angle = float(batch_sample[1])
+				if bool(batch_sample[2]): 
+					image = np.fliplr(image) # if this is one of the inverted samples, we must now invert the image
+		    		images.append(image)
+		    		angles.append(angle)
+			X_train = np.array(images)
+			y_train = np.array(angles)
+            		yield sklearn.utils.shuffle(X_train, y_train)
 
 # compile and train the model using the generator function
 train_generator = generator(train_samples, batch_size=5)
