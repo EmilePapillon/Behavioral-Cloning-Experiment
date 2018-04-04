@@ -12,51 +12,67 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 lines = []
-#with open('../data/driving_log.csv', 'r', newline='') as csvfile:
 with open('../data/driving_log.csv') as csvfile:
-	#dialect = csv.Sniffer().sniff(csvfile.read(1024), delimiters=',')
-	#csvfile.seek(0) #rewind
 	reader = csv.reader(csvfile)
 	for line in reader:
 		lines.append(line)
 
-train_samples, validation_samples = train_test_split(lines, test_size= 0.2)
+#returns a numpy array that is a copy of the input array with a new row of zeros at its end
+def appendARowOfZeros(array)
+	__array = np.zeros(array.shape[0], array.shape[1]+1) 
+	__array[:,0:array.shape[1]] = array
+	return __array
 
-def generator(samples, batch_size=32):
+#augments and pre-processes (shuffle, crop)  the datai
+#reformats the data : [img_path angle]
+def preprocess(samples):
+	#TODO calculate a more accurate correction factor
+	correction_factor = 0.2
+	
+	#augment with left and right images
+	samples_center = appendARowOfZeros(samples[:,np.array([0,3])]) #row of zeros is appended to indicate that this is not a flipped image
+	samples_left = appendARowOfZeros(samples[:,np.array([1,3])])
+	samples_left[:,1] += correction_factor #slightly change the steering angle label for the left camera
+	samples_right = appendARowOfZeros(samples[:,np.array([2,3])])
+	samples_right[:,1] -= correction_factor 
+	samples_mirror = samples_center
+	samples_mirror[:,1] *= -1 #flip the angle
+	samples_mirror[:,-1] = 1 #this one is flipped	
+	
+	preprocessed_samples = np.append(samples_center, [ samples_left, samples_right, samples_mirror ],axis=0) 
+	return shuffle(preprocessed_samples)
+
+
+train_samples, validation_samples = train_test_split(lines, test_size= 0.2)
+	
+#TODO :make sure samples are shuffled somewhere in the process
+
+def generator(samples, batch_size=10):
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
-        shuffle(samples)
+        
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
 
             images = []
             angles = []
             for batch_sample in batch_samples:
-                name = '../data/IMG/'+batch_sample[0].split('/')[-1]
-                
-		center_image = cv2.imread(name)
-                center_angle = float(batch_sample[3])	
-		images.append(center_image)
-                angles.append(center_angle)
-		
-		left_image = cv2.imread(name)
-                left_angle = float(batch_sample[3])	
-		images.append(left_image)
-                angles.append(left_angle)
 
-		right_image = cv2.imread(name)
-                right_angle = float(batch_sample[3])	
-		images.append(center_image)
-                angles.append(center_angle)
-            
-		#TODO: trim image to only see section with road
+		    name = '../data/IMG/'+batch_sample[0].split('/')[-1]
+
+		    image = cv2.imread(name)
+		    angle = float(batch_sample[1])
+		    if bool(batch_sample[2]): image = np.fliplr(image) # if this is one of the inverted samples, we must now invert the image
+		    images.append(image)
+		    angles.append(angle)
+
             X_train = np.array(images)
             y_train = np.array(angles)
             yield sklearn.utils.shuffle(X_train, y_train)
 
 # compile and train the model using the generator function
-train_generator = generator(train_samples, batch_size=16)
-validation_generator = generator(validation_samples, batch_size=16)
+train_generator = generator(train_samples, batch_size=5)
+validation_generator = generator(validation_samples, batch_size=5)
 ch, row, col = 3, 160, 320  # Trimmed image format
 
 #model
@@ -90,24 +106,10 @@ model.compile(loss='mse', optimizer='adam')
 model.fit_generator(train_generator, steps_per_epoch= len(train_samples),
 validation_data=validation_generator, validation_steps=len(validation_samples), epochs=1, verbose = 1)
 
-"""
-#former code :
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-=======
->>>>>>> e3a675f8b754e4a6231648abfcb517f2820b82c1
-model.fit_generator(train_generator, 
-	samples_per_epoch= len(train_samples),
-	validation_data = validation_generator,
-	nb_val_samples=len(validation_samples),
-	nb_epoch = 1, verbose = 1 )
-<<<<<<< HEAD
-<<<<<<< HEAD
-"""
-
 model.save('../model.h5')
 
 '''
+#This is to display training / validation losses
 from keras.models import Model
 import matplotlib.pyplot as plt
 
