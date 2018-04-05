@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4:
 
 import cv2
@@ -20,8 +21,8 @@ with open('../data/driving_log.csv') as csvfile:
 		lines.append(line)
 
 #returns a numpy array that is a copy of the input array with a new row of zeros at its end
-def appendARowOfZeros(array):
-	__array = np.zeros(array.shape[0], array.shape[1]+1) 
+def appendEmptyRow(array):
+	__array = np.empty((array.shape[0], array.shape[1]+1),dtype=str) 
 	__array[:,0:array.shape[1]] = array
 	return __array
 
@@ -30,16 +31,16 @@ def appendARowOfZeros(array):
 def preprocess(samples):
 	#TODO calculate a more accurate correction factor
 	correction_factor = 0.2
-	
+	samples=np.array(samples)
 	#augment with left and right images
-	samples_center = appendARowOfZeros(samples[:,np.array([0,3])]) #row of zeros is appended to indicate that this is not a flipped image
-	samples_left = appendARowOfZeros(samples[:,np.array([1,3])])
-	samples_left[:,1] += correction_factor #slightly change the steering angle label for the left camera
-	samples_right = appendARowOfZeros(samples[:,np.array([2,3])])
-	samples_right[:,1] -= correction_factor 
+	samples_center = appendEmptyRow(samples[:,np.array([0,3])]) #row of zeros is appended to indicate that this is not a flipped image
+	samples_left = appendEmptyRow(samples[:,np.array([1,3])])
+	samples_left[:,1] = [str(float(sample_left) - correction_factor) for sample_left in samples_left[:,1]] #slightly change the steering angle label for the left camera #TODO <--fix this here 
+	samples_right = appendEmptyRow(samples[:,np.array([2,3])])
+	samples_right[:,1] = str(float(samples_right[:,1])- correction_factor) 
 	samples_mirror = samples_center
-	samples_mirror[:,1] *= -1 #flip the angle
-	samples_mirror[:,-1] = 1 #this one is flipped	
+	samples_mirror[:,1] = str(float(samples_mirror[:,1]) *-1) #flip the angle
+	samples_mirror[:,-1] = 'f' #this one is flipped	
 	
 	preprocessed_samples = np.append(samples_center, [ samples_left, samples_right, samples_mirror ],axis=0) 
 	return shuffle(preprocessed_samples)
@@ -55,8 +56,8 @@ def generator(samples, batch_size=10):
 	while 1: # Loop forever so the generator never terminates
 		for offset in range(0, num_samples, batch_size):
 			batch_samples = samples[offset:offset+batch_size]
-            		images = []
-            		angles = []
+			images = []
+			angles = []
 			
 			for batch_sample in batch_samples:
 				name = '../data/IMG/'+batch_sample[0].split('/')[-1]
@@ -64,16 +65,16 @@ def generator(samples, batch_size=10):
 				angle = float(batch_sample[1])
 				if bool(batch_sample[2]): 
 					image = np.fliplr(image) # if this is one of the inverted samples, we must now invert the image
-		    		images.append(image)
-		    		angles.append(angle)
+					images.append(image)
+					angles.append(angle)
 			X_train = np.array(images)
 			y_train = np.array(angles)
-            		yield sklearn.utils.shuffle(X_train, y_train)
+			yield sklearn.utils.shuffle(X_train, y_train)
 
 # compile and train the model using the generator function
-train_generator = generator(train_samples, batch_size=5)
-validation_generator = generator(validation_samples, batch_size=5)
-ch, row, col = 3, 160, 320  # Trimmed image format
+train_generator = generator(preprocess(train_samples), batch_size=5)
+validation_generator = generator(preprocess(validation_samples), batch_size=5)
+ch, row, col = 3, 160, 320  
 
 #model
 model = Sequential()
