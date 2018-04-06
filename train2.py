@@ -22,7 +22,7 @@ with open('../data/driving_log.csv') as csvfile:
 
 #returns a numpy array that is a copy of the input array with a new row of zeros at its end
 def appendEmptyRow(array):
-	__array = np.empty((array.shape[0], array.shape[1]+1),dtype=str) 
+	__array = np.empty((array.shape[0], array.shape[1]+1),dtype=np.dtype('<U128')) #empty array of unicode 128 character strings, little endian
 	__array[:,0:array.shape[1]] = array
 	return __array
 
@@ -35,14 +35,20 @@ def preprocess(samples):
 	#augment with left and right images
 	samples_center = appendEmptyRow(samples[:,np.array([0,3])]) #row of zeros is appended to indicate that this is not a flipped image
 	samples_left = appendEmptyRow(samples[:,np.array([1,3])])
-	samples_left[:,1] = [str(float(sample_left) - correction_factor) for sample_left in samples_left[:,1]] #slightly change the steering angle label for the left camera #TODO <--fix this here 
+	samples_left[:,1] = [str(float(sample_left) + correction_factor) for sample_left in samples_left[:,1]] #slightly change the steering angle label for the left camera e
 	samples_right = appendEmptyRow(samples[:,np.array([2,3])])
-	samples_right[:,1] = str(float(samples_right[:,1])- correction_factor) 
+	samples_right[:,1] = [str(float(sample_right) - correction_factor) for sample_right in samples_right[:,1]] 
 	samples_mirror = samples_center
-	samples_mirror[:,1] = str(float(samples_mirror[:,1]) *-1) #flip the angle
+	samples_mirror[:,1] = [str(float(sample_mirror) *-1) for sample_mirror in samples_mirror[:,1]] #flip the angle
 	samples_mirror[:,-1] = 'f' #this one is flipped	
 	
-	preprocessed_samples = np.append(samples_center, [ samples_left, samples_right, samples_mirror ],axis=0) 
+	#appending in a loop was the only way that worked
+	preprocessed_samples = samples_center
+	arrays_to_append = [samples_left,samples_right,samples_mirror]
+	for array in arrays_to_append : 
+		preprocessed_samples = np.append(preprocessed_samples, array, axis=0) 
+	print(preprocessed_samples.shape)
+
 	return shuffle(preprocessed_samples)
 
 
@@ -50,7 +56,7 @@ train_samples, validation_samples = train_test_split(lines, test_size= 0.2)
 	
 #TODO :make sure samples are shuffled somewhere in the process
 
-def generator(samples, batch_size=10):
+def generator(samples, batch_size=32):
         
 	num_samples = len(samples)
 	while 1: # Loop forever so the generator never terminates
@@ -72,8 +78,10 @@ def generator(samples, batch_size=10):
 			yield sklearn.utils.shuffle(X_train, y_train)
 
 # compile and train the model using the generator function
-train_generator = generator(preprocess(train_samples), batch_size=5)
-validation_generator = generator(preprocess(validation_samples), batch_size=5)
+preprocessed_train_samples = preprocess(train_samples)
+preprocessed_validation_samples = preprocess(validation_samples) 
+train_generator = generator(preprocessed_train_samples , batch_size=16)
+validation_generator = generator(preprocessed_validation_samples , batch_size=16)
 ch, row, col = 3, 160, 320  
 
 #model
@@ -104,8 +112,8 @@ model.add(Dense(1))
 model.compile(loss='mse', optimizer='adam')
 
 #If the above code throw exceptions, try : 
-model.fit_generator(train_generator, steps_per_epoch= len(train_samples),
-validation_data=validation_generator, validation_steps=len(validation_samples), epochs=1, verbose = 1)
+model.fit_generator(train_generator, steps_per_epoch= len(preprocessed_train_samples),
+validation_data=validation_generator, validation_steps=len(preprocessed_validation_samples), epochs=1, verbose = 1)
 
 model.save('../model.h5')
 
