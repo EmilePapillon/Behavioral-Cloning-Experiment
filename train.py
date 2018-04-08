@@ -8,8 +8,8 @@ import csv
 import os
 import sklearn
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda
-from keras.layers.convolutional import Convolution2D, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Cropping2D
+from keras.layers import Conv2D as Convolution2D
 from keras.layers.pooling import MaxPooling2D
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
@@ -31,7 +31,7 @@ def appendEmptyRow(array):
 #reformats the data : [img_path angle]
 def preprocess(samples):
 	#TODO calculate a more accurate correction factor
-	correction_factor = 0.2
+	correction_factor = 0.35
 	samples=np.array(samples)
 	#augment with left and right images
 	samples_center = appendEmptyRow(samples[:,np.array([0,3])]) #row of zeros is appended to indicate that this is not a flipped image
@@ -89,27 +89,28 @@ ch, row, col = 3, 160, 320
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
 model.add(Lambda(lambda x: (x-128)/128))
-model.add(Convolution2D(16,3,3, 
-	activation='relu', 
+model.add(Convolution2D(24,(5,5), strides = (2,2),
+	activation='elu', 
 	border_mode= 'same'))
-model.add(Convolution2D(16,3,3,
-	activation='relu',
+model.add(Convolution2D(36,(5,5), strides = (2,2),
+	activation='elu',
 	border_mode='same'))
-model.add(MaxPooling2D())
-model.add(Convolution2D(24,3,3, 
-	activation='relu',
+model.add(dropout(0.5))
+model.add(Convolution2D(48,(5,5), strides = (2,2),
+	activation='elu',
 	border_mode='same'))
-model.add(Convolution2D(24,3,3, 
-	activation='relu',
+model.add(Convolution2D(64,(3,3), 
+	activation='elu',
 	border_mode='same'))
-model.add(MaxPooling2D())
-model.add(Convolution2D(32,3,3, 
-	activation='relu',
+model.add(Convolution2D(64,(3,3), 
+	activation='elu',
 	border_mode='same'))
-model.add(Convolution2D(32,3,3, 
-	activation='relu',
-	border_mode='same'))
-model.add(MaxPooling2D())
+model.add(dropout(0.5))
+
+#model.add(Convolution2D(64,3,3, 
+#	activation='relu',
+#	border_mode='same'))
+#model.add(MaxPooling2D())
 
 model.add(Flatten())
 model.add(Dense(120))
@@ -121,7 +122,7 @@ model.compile(loss='mse', optimizer='adam')
 
 #If the above code throw exceptions, try : 
 history_object = model.fit_generator(train_generator, steps_per_epoch= len(preprocessed_train_samples),
-validation_data=validation_generator, validation_steps=len(preprocessed_validation_samples), epochs=5, verbose = 1)
+validation_data=validation_generator, validation_steps=len(preprocessed_validation_samples), epochs=3, verbose = 1)
 
 model.save('../model.h5')
 
