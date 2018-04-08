@@ -47,7 +47,7 @@ def preprocess(samples):
 	arrays_to_append = [samples_left,samples_right,samples_mirror]
 	for array in arrays_to_append : 
 		preprocessed_samples = np.append(preprocessed_samples, array, axis=0) 
-	print(preprocessed_samples.shape)
+#	print(preprocessed_samples.shape)
 
 	return shuffle(preprocessed_samples)
 
@@ -78,10 +78,12 @@ def generator(samples, batch_size=32):
 			yield sklearn.utils.shuffle(X_train, y_train)
 
 # compile and train the model using the generator function
-preprocessed_train_samples = preprocess(train_samples)
-preprocessed_validation_samples = preprocess(validation_samples) 
-train_generator = generator(preprocessed_train_samples , batch_size=1)
-validation_generator = generator(preprocessed_validation_samples , batch_size=1)
+preprocessed_train_samples = preprocess(train_samples) 
+print(preprocessed_train_samples.shape)
+preprocessed_validation_samples = preprocess(validation_samples)
+print(preprocessed_validation_samples.shape)
+train_generator = generator(preprocessed_train_samples , batch_size=2)
+validation_generator = generator(preprocessed_validation_samples , batch_size=2)
 ch, row, col = 3, 160, 320  
 
 #model
