@@ -8,8 +8,7 @@ import csv
 import os
 import sklearn
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Cropping2D
-from keras.layers import Conv2D as Convolution2D
+from keras.layers import Flatten, Dense, Lambda, Cropping2D, Dropout, Conv2D
 from keras.layers.pooling import MaxPooling2D
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
@@ -81,31 +80,21 @@ def generator(samples, batch_size=32):
 # compile and train the model using the generator function
 preprocessed_train_samples = preprocess(train_samples)
 preprocessed_validation_samples = preprocess(validation_samples) 
-train_generator = generator(preprocessed_train_samples , batch_size=24)
-validation_generator = generator(preprocessed_validation_samples , batch_size=24)
+train_generator = generator(preprocessed_train_samples , batch_size=1)
+validation_generator = generator(preprocessed_validation_samples , batch_size=1)
 ch, row, col = 3, 160, 320  
 
 #model
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
 model.add(Lambda(lambda x: (x-128)/128))
-model.add(Convolution2D(24,(5,5), strides = (2,2),
-	activation='elu', 
-	border_mode= 'same'))
-model.add(Convolution2D(36,(5,5), strides = (2,2),
-	activation='elu',
-	border_mode='same'))
-model.add(dropout(0.5))
-model.add(Convolution2D(48,(5,5), strides = (2,2),
-	activation='elu',
-	border_mode='same'))
-model.add(Convolution2D(64,(3,3), 
-	activation='elu',
-	border_mode='same'))
-model.add(Convolution2D(64,(3,3), 
-	activation='elu',
-	border_mode='same'))
-model.add(dropout(0.5))
+model.add(Conv2D(24, (5, 5), padding="same", activation="elu", strides=(2, 2)))
+model.add(Conv2D(36, (5, 5), padding="same", activation="elu", strides=(2, 2)))
+model.add(Conv2D(48, (5, 5), padding="same", activation="elu", strides=(2, 2)))
+model.add(Dropout(0.5))
+model.add(Conv2D(64, (3, 3), padding="same", activation="elu"))
+model.add(Conv2D(64, (3, 3), padding="same", activation="elu"))
+model.add(Dropout(0.5))
 
 #model.add(Convolution2D(64,3,3, 
 #	activation='relu',
@@ -130,7 +119,7 @@ model.save('../model.h5')
 #This is to display training / validation losses
 ### print the keys contained in the history object
 print(history_object.history.keys())
-
+fig= plt.figure()
 ### plot the training and validation loss for each epoch
 plt.plot(history_object.history['loss'])
 plt.plot(history_object.history['val_loss'])
@@ -138,5 +127,6 @@ plt.title('model mean squared error loss')
 plt.ylabel('mean squared error loss')
 plt.xlabel('epoch')
 plt.legend(['training set', 'validation set'], loc='upper right')
-plt.show()
+#plt.show()
+plt.savefig('../loss.png')
 
