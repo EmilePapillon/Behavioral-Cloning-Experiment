@@ -60,11 +60,18 @@ def pick(numpy_array,index):
     return numpy_array[index], np.delete(numpy_array, index)
 
 # the logic for making batches
-def batch_generator(training_data_reference, methods, batch_size = 32):
+def batch_generator(training_data_reference, methods_list, batch_size = 32):
     #define a list of transformations for each image in the data
+    restart_flag = False
     while True:
         
-        restart_flag = False
+        
+        if restart_flag : 
+            for data_point in training_data_reference:
+                data_point['methods'] = np.array(range(len(methods_list)))
+            restart_flag = False
+        #methods = methods_list
+        print('This should be the beginning of a new epoch...')
         num_samples = len(training_data_reference)
 
         while True:
@@ -89,16 +96,21 @@ def batch_generator(training_data_reference, methods, batch_size = 32):
                         random_int = np.random.randint(num_methods_left)
                         method_index,training_data_reference[offset+idx]['methods'] = pick(batch_samples[idx]['methods'], random_int)
                         method = methods[method_index]
-                    except ValueError: 
+                    except ValueError as e: 
                         #method = do_nothing
                         restart_flag = True
                         break
                     # get image and angle from calling selected method
                     X_batch[idx], y_batch[idx] = method(image,angle)
 
-                if restart_flag: break
+                if restart_flag: 
+                    break
+            
 
                 yield X_batch, y_batch
+            
+            if restart_flag: 
+                break
 
 data_file = '../data/driving_log.csv'
 data = pd.read_csv(data_file, header= None, names = ['center', 'left', 'right', 'steering_angle', 'x','y','z'])
