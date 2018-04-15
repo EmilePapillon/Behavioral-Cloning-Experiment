@@ -13,80 +13,106 @@ from keras.layers.pooling import MaxPooling2D
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import matplotlib.pyplot as plt
-
-lines = []
-with open('../data/driving_log.csv') as csvfile:
-	reader = csv.reader(csvfile)
-	for line in reader:
-		if line is not None: #make sure this is not an empty line
-			lines.append(line)
-
-#returns a numpy array that is a copy of the input array with a new row of zeros at its end
-def appendEmptyRow(array):
-	__array = np.empty((array.shape[0], array.shape[1]+1),dtype=np.dtype('<U128')) #empty array of unicode 128 character strings, little endian
-	__array[:,0:array.shape[1]] = array
-	return __array
-
-#augments and pre-processes (shuffle, crop)  the datai
-#reformats the data : [img_path angle]
-def preprocess(samples):
-	#TODO calculate a more accurate correction factor
-	correction_factor = 0.35
-	samples=np.array(samples)
-	#augment with left and right images
-	samples_center = appendEmptyRow(samples[:,np.array([0,3])]) #row of zeros is appended to indicate that this is not a flipped image
-	samples_left = appendEmptyRow(samples[:,np.array([1,3])])
-	samples_left[:,1] = [str(float(sample_left) + correction_factor) for sample_left in samples_left[:,1]] #slightly change the steering angle label for the left camera e
-	samples_right = appendEmptyRow(samples[:,np.array([2,3])])
-	samples_right[:,1] = [str(float(sample_right) - correction_factor) for sample_right in samples_right[:,1]] 
-	samples_mirror = samples_center
-	samples_mirror[:,1] = [str(float(sample_mirror) *-1) for sample_mirror in samples_mirror[:,1]] #flip the angle
-	samples_mirror[:,-1] = 'f' #this one is flipped	
-	
-	#appending in a loop was the only way that worked
-	preprocessed_samples = samples_center
-	arrays_to_append = [samples_left,samples_right,samples_mirror]
-	for array in arrays_to_append : 
-		preprocessed_samples = np.append(preprocessed_samples, array, axis=0) 
-#	print(preprocessed_samples.shape)
-
-	return shuffle(preprocessed_samples)
+import pandas as pd
 
 
-train_samples, validation_samples = train_test_split(lines, test_size= 0.2)
-	
-#TODO :make sure samples are shuffled somewhere in the process
+# Data augmentation functions definitions
+def do_nothing(image,angle):
+    return image, angle
 
-def generator(samples, batch_size=32):
+def grayscale(image, angle):
+    gray = cv2.cvtColor(np.copy(image), cv2.COLOR_RGB2GRAY)
+    return cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB), angle
+
+def mirror(image, angle): 
+    return np.fliplr(np.copy(image)), -angle
+
+def random_brightness(image, angle):
+    image1 = cv2.cvtColor(np.copy(image),cv2.COLOR_RGB2HSV)
+    random_bright = 0.8 + 0.4*(2*np.random.uniform()-1.0)    
+    image1[:,:,2] = image1[:,:,2]*random_bright
+    image1 = cv2.cvtColor(image1,cv2.COLOR_HSV2RGB)
+    return image1, angle
+
+def random_translation(img, angle):
+    tx_range,ty_range = 64,64
+    rows,cols,ch = img.shape
+    p=10 #pad the image (reflect the boundary)
+    tr_x = tx_range*np.random.uniform()-tx_range/2 #random number between -tx_range and +tx_range
+    tr_y = ty_range*np.random.uniform()-ty_range/2
+    #tr_y=-5
+    Trans_M = np.float32([[1,0,tr_x],[0,1,tr_y]])
+    wrap = cv2.copyMakeBorder(img,p,p,p,p,0) #pads image with 10px uniform border
+    img = cv2.warpAffine(wrap,Trans_M,(cols+2*p,rows+2*p))
+    #img = img[p:p+cols,p:p+rows]
+    return img, angle #how to calculate angle??
+
+#return a list of tuples, each tuple containing path and angle for a training image, with the list of methods appended
+def make_reference_list(methods_index, data, offset=0.2):
+    paths= data.values[:,np.array([0,1,2])].reshape(-1) #flattened list containing center, left, right images paths
+    angles = np.array([[center, left, right] for center, left, right in zip(data.values[:,3], data.values[:,3]+offset, data.values[:,3]-offset)]).reshape(-1) #flattened list of corresponding angles
+    return [{'path':'../data/IMG/'+path.split('/')[-1], 'angle': angle, 'methods': methods_index} for path,angle in zip(paths,angles)]
+
+#picks a random element out of array, return the element and the updated numpy array
+def pick(numpy_array,index):
+    return numpy_array[index], np.delete(numpy_array, index)
+
+# the logic for making batches
+def batch_generator(training_data_reference, methods, batch_size = 32):
+    #define a list of transformations for each image in the data
+    while True:
         
-	num_samples = len(samples)
-	while 1: # Loop forever so the generator never terminates
-		for offset in range(0, num_samples, batch_size):
-			batch_samples = samples[offset:offset+batch_size]
-			images = []
-			angles = []
-			for batch_sample in batch_samples:
-				name = '../data/IMG/'+batch_sample[0].split('/')[-1]
-				image = cv2.imread(name)
-				angle = float(batch_sample[1])
-				if bool(batch_sample[2]): 
-					image = np.fliplr(image) # if this is one of the inverted samples, we must now invert the image
-					if (image is not None and angle is not None):
-						images.append(image)
-						angles.append(angle)
-			X_train = np.array(images)
-			y_train = np.array(angles)
-			yield sklearn.utils.shuffle(X_train, y_train)
+        restart_flag = False
+        num_samples = len(training_data_reference)
 
-# compile and train the model using the generator function
-preprocessed_train_samples = preprocess(train_samples) 
-print(preprocessed_train_samples.shape)
-preprocessed_validation_samples = preprocess(validation_samples)
-print(preprocessed_validation_samples.shape)
-train_generator = generator(preprocessed_train_samples , batch_size=8)
-validation_generator = generator(preprocessed_validation_samples , batch_size=8)
-ch, row, col = 3, 160, 320  
+        while True:
 
+            for offset in range(0, num_samples, batch_size):
+
+                # get the next batch images
+                batch_samples = training_data_reference[offset:offset+batch_size]
+                X_batch, y_batch = np.empty((batch_size, 160 ,320, 3), dtype = np.uint8), np.empty(batch_size)
+
+                #for each image in batch...
+                for idx in range(len(batch_samples)):                 
+
+                    #pick the method and refresh the data reference
+                    image_path = batch_samples[idx]['path']
+                    image = cv2.imread(image_path)
+                    angle = batch_samples[idx]['angle']
+                    num_methods_left = len(batch_samples[idx]['methods'])
+
+                    #apply a random method and remove it from the list of methods for that datapoint
+                    try:
+                        random_int = np.random.randint(num_methods_left)
+                        method_index,training_data_reference[offset+idx]['methods'] = pick(batch_samples[idx]['methods'], random_int)
+                        method = methods[method_index]
+                    except ValueError: 
+                        #method = do_nothing
+                        restart_flag = True
+                        break
+                    # get image and angle from calling selected method
+                    X_batch[idx], y_batch[idx] = method(image,angle)
+
+                if restart_flag: break
+
+                yield X_batch, y_batch
+
+data_file = '../data/driving_log.csv'
+data = pd.read_csv(data_file, header= None, names = ['center', 'left', 'right', 'steering_angle', 'x','y','z'])
+
+#list all the possible augmentation methods here
+methods = [grayscale, mirror, random_brightness,do_nothing]
+
+methods_index = np.array(range(len(methods)))
+training_data_reference = shuffle(make_reference_list(methods_index,data))
+
+train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
+
+train_generator = batch_generator(train_samples , methods ,batch_size=32)
+validation_generator = batch_generator(validation_samples ,methods ,  batch_size=32)
+
+row, col, ch = 160, 320, 3  
 #model
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
@@ -98,12 +124,6 @@ model.add(Dropout(0.5))
 model.add(Conv2D(64, (3, 3), padding="same", activation="elu"))
 model.add(Conv2D(64, (3, 3), padding="same", activation="elu"))
 model.add(Dropout(0.5))
-
-#model.add(Convolution2D(64,3,3, 
-#	activation='relu',
-#	border_mode='same'))
-#model.add(MaxPooling2D())
-
 model.add(Flatten())
 model.add(Dense(120))
 model.add(Dense(84))
@@ -113,8 +133,8 @@ model.add(Dense(1))
 model.compile(loss='mse', optimizer='adam')
 
 #If the above code throw exceptions, try : 
-history_object = model.fit_generator(train_generator, steps_per_epoch= len(preprocessed_train_samples),
-validation_data=validation_generator, validation_steps=len(preprocessed_validation_samples), epochs=3, verbose = 1)
+history_object = model.fit_generator(train_generator, steps_per_epoch= len(train_samples)*len(methods),
+validation_data=validation_generator, validation_steps=len(validation_samples)*len(methods), epochs=3, verbose = 1)
 
 model.save('../model.h5')
 
@@ -132,4 +152,3 @@ plt.xlabel('epoch')
 plt.legend(['training set', 'validation set'], loc='upper right')
 #plt.show()
 plt.savefig('../loss.png')
-
