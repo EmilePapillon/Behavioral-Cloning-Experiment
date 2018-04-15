@@ -12,9 +12,12 @@ from keras.layers import Flatten, Dense, Lambda, Cropping2D, Dropout, Conv2D
 from keras.layers.pooling import MaxPooling2D
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
-
+from math import floor
+from itertools import tee
 
 # Data augmentation functions definitions
 def do_nothing(image,angle):
@@ -121,16 +124,18 @@ methods = [grayscale, mirror, random_brightness,do_nothing]
 
 methods_index = np.array(range(len(methods)))
 
-left_right_images_offset = 0.2 #angle offset for left and right images in radians
+left_right_images_offset = 1.2/10 #angle offset for left and right images in radians
 training_data_reference = shuffle(make_reference_list(methods_index,data,offset=left_right_images_offset))
 
 train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
 
 bs = 32
-train_generator = batch_generator(train_samples , methods ,batch_size=bs)
+train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods ,batch_size=bs))
 validation_generator = batch_generator(validation_samples ,methods ,  batch_size=bs)
 
-row, col, ch = 160, 320, 3  
+X_sample,_ = next(train_generator_copy)
+row, col, ch =  X_sample.shape
+ 
 #model
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
@@ -150,9 +155,11 @@ model.add(Dense(1))
 #train
 model.compile(loss='mse', optimizer='adam')
 
-#If the above code throw exceptions, try : 
-history_object = model.fit_generator(train_generator, steps_per_epoch= len(train_samples)*len(methods),
-validation_data=validation_generator, validation_steps=len(validation_samples)*len(methods), epochs=7, verbose = 1)
+#If the above code throw exceptions, try :
+batches_per_epoch = int(floor(len(train_samples)*len(methods)/bs))
+validation_batches_per_epoch = int(floor(len(validation_samples)*len(methods)/bs)) 
+history_object = model.fit_generator(train_generator, steps_per_epoch=batches_per_epoch, 
+validation_data=validation_generator, validation_steps=validation_batches_per_epoch, epochs=7, verbose = 1)
 
 model.save('../model.h5')
 
