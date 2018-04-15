@@ -114,8 +114,9 @@ training_data_reference = shuffle(make_reference_list(methods_index,data,offset=
 
 train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
 
-train_generator = batch_generator(train_samples , methods ,batch_size=32)
-validation_generator = batch_generator(validation_samples ,methods ,  batch_size=32)
+bs = 32
+train_generator = batch_generator(train_samples , methods ,batch_size=bs)
+validation_generator = batch_generator(validation_samples ,methods ,  batch_size=bs)
 
 row, col, ch = 160, 320, 3  
 #model
@@ -139,7 +140,7 @@ model.compile(loss='mse', optimizer='adam')
 
 #If the above code throw exceptions, try : 
 history_object = model.fit_generator(train_generator, steps_per_epoch= len(train_samples)*len(methods),
-validation_data=validation_generator, validation_steps=len(validation_samples)*len(methods), epochs=3, verbose = 1)
+validation_data=validation_generator, validation_steps=len(validation_samples)*len(methods), epochs=7, verbose = 1)
 
 model.save('../model.h5')
 
