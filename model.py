@@ -43,9 +43,11 @@ def random_translation(img, angle):
     #tr_y=-5
     Trans_M = np.float32([[1,0,tr_x],[0,1,tr_y]])
     wrap = cv2.copyMakeBorder(img,p,p,p,p,0) #pads image with 10px uniform border
-    img = cv2.warpAffine(wrap,Trans_M,(cols+2*p,rows+2*p))
+    img = cv2.warpAffine(wrap,Trans_M,(cols,rows))
     #img = img[p:p+cols,p:p+rows]
-    return img, angle #how to calculate angle??
+    
+    new_angle = angle + tr_x * 3.75e-4
+    return img, new_angle 
 
 #return a list of tuples, each tuple containing path and angle for a training image, with the list of methods appended
 def make_reference_list(methods_index, data, offset=0.2):
@@ -103,9 +105,12 @@ data = pd.read_csv(data_file, header= None, names = ['center', 'left', 'right', 
 
 #list all the possible augmentation methods here
 methods = [grayscale, mirror, random_brightness,do_nothing]
+#methods = [grayscale, mirror, random_brightness,random_translation,do_nothing]
 
 methods_index = np.array(range(len(methods)))
-training_data_reference = shuffle(make_reference_list(methods_index,data))
+
+left_right_images_offset = 0.2 #angle offset for left and right images in radians
+training_data_reference = shuffle(make_reference_list(methods_index,data,offset=left_right_images_offset))
 
 train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
 
