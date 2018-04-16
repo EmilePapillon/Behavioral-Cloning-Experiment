@@ -108,9 +108,7 @@ def batch_generator(training_data_reference, methods_list, batch_size = 32):
 
                 if restart_flag: 
                     break
-            if X_batch is not None :
                 yield X_batch, y_batch
-            else: restart_flag = True
             
             if restart_flag: 
                 break
