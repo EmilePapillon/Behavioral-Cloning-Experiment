@@ -18,13 +18,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from math import floor
 from itertools import tee
-
+from decimal import Decimal
 # Data augmentation functions definitions
 # Data augmentation functions definitions
 def crop_img(image,crop_factor,offset=[0,0]):
     cf= crop_factor
     h,w,ch = image.shape
-    if h%cf is not 0 or w%cf is not 0 : 
+    if Decimal(str(h))%Decimal(str(cf)) != 0 or Decimal(str(w))%Decimal(str(cf)) != 0 : 
         raise(ValueError("crop factor should be a common divider of the height and the width")) 
     #print(h)
     #print(w)
@@ -115,8 +115,9 @@ def batch_generator(training_data_reference, methods_list,crop_factor ,batch_siz
 
                 # get the next batch images
                 batch_samples = training_data_reference[offset:offset+batch_size]
-                X_batch, y_batch = np.empty((batch_size, int(160/cf) ,int(320/cf), 3), dtype = np.uint8), np.empty(batch_size)
-
+                if 'X_batch' in locals():
+                    del X_batch,y_batch
+                X_batch, y_batch = np.empty((batch_size,int(160/crop_factor), int(320/crop_factor),3), dtype=np.uint8),np.empty(batch_size)
                 #for each image in batch...
                 for idx in range(len(batch_samples)):                 
 
@@ -151,8 +152,11 @@ data_file = '../data/driving_log.csv'
 data = pd.read_csv(data_file, header= None, names = ['center', 'left', 'right', 'steering_angle', 'x','y','z'])
 
 #list all the possible augmentation methods here
-methods = [grayscale, mirror, random_brightness,random_offset,do_nothing]
-#methods = [grayscale, mirror, random_brightness,random_translation,do_nothing]
+#NOTE :removed the grayscale method due to running out of memory
+#methods = [grayscale, mirror, random_brightness,random_offset,do_nothing]
+#methods = [grayscale, mirror, random_brightness,do_nothing]
+
+methods = [grayscale, mirror, random_brightness,random_translation,do_nothing]
 
 methods_index = np.array(range(len(methods)))
 
@@ -163,12 +167,16 @@ train_samples, validation_samples = train_test_split(training_data_reference, te
 
 bs = 32
 cf=1.6
-train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods , cf,batch_size=bs))
+#cf=1
+#train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods , cf,batch_size=bs))
+train_generator = batch_generator(train_samples, methods, cf, batch_size = bs)
 validation_generator = batch_generator(validation_samples ,methods ,cf,  batch_size=bs)
 
-X_sample,_ = next(train_generator_copy)
-row, col, ch =  X_sample[0].shape
- 
+#X_sample,_ = next(train_generator_copy)
+#row, col, ch =  X_sample[0].shape
+#print(row,col,ch) 
+row,col,ch = 100, 200, 3
+
 #model
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
