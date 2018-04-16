@@ -154,9 +154,9 @@ data = pd.read_csv(data_file, header= None, names = ['center', 'left', 'right', 
 #list all the possible augmentation methods here
 #NOTE :removed the grayscale method due to running out of memory
 #methods = [grayscale, mirror, random_brightness,random_offset,do_nothing]
-methods = [grayscale, mirror, random_brightness,do_nothing]
+#methods = [grayscale, mirror, random_brightness,do_nothing]
 
-#methods = [grayscale, mirror, random_brightness,random_translation,do_nothing]
+methods = [grayscale, mirror, random_brightness,random_translation,do_nothing]
 
 methods_index = np.array(range(len(methods)))
 
@@ -166,14 +166,17 @@ training_data_reference = shuffle(make_reference_list(methods_index,data,offset=
 train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
 
 bs = 32
-#cf=1.6
-cf=1
-train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods , cf,batch_size=bs))
+cf=1.6
+#cf=1
+#train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods , cf,batch_size=bs))
+train_generator = batch_generator(train_samples, methods, cf, batch_size = bs)
 validation_generator = batch_generator(validation_samples ,methods ,cf,  batch_size=bs)
 
-X_sample,_ = next(train_generator_copy)
-row, col, ch =  X_sample[0].shape
-print(row,col,ch) 
+#X_sample,_ = next(train_generator_copy)
+#row, col, ch =  X_sample[0].shape
+#print(row,col,ch) 
+row,col,ch = 100, 200, 3
+
 #model
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
