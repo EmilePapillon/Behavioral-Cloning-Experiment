@@ -122,7 +122,7 @@ methods = [grayscale, mirror, random_brightness,do_nothing]
 
 methods_index = np.array(range(len(methods)))
 
-left_right_images_offset = 0.2 #1.2/10 #angle offset for left and right images in radians
+left_right_images_offset = 1.2/10 #angle offset for left and right images in radians
 training_data_reference = shuffle(make_reference_list(methods_index,data,offset=left_right_images_offset))
 
 train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
@@ -158,7 +158,7 @@ model.compile(loss='mse', optimizer='adam')
 batches_per_epoch = int(floor(len(train_samples)*len(methods)/bs))
 validation_batches_per_epoch = int(floor(len(validation_samples)*len(methods)/bs)) 
 history_object = model.fit_generator(train_generator, steps_per_epoch=batches_per_epoch, 
-validation_data=validation_generator, validation_steps=validation_batches_per_epoch, epochs=7, verbose = 1)
+validation_data=validation_generator, validation_steps=validation_batches_per_epoch, epochs=10, verbose = 1)
 
 model.save('../model.h5')
 
