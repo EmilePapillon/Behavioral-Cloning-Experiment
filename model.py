@@ -133,7 +133,7 @@ bs = 32
 train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods ,batch_size=bs))
 validation_generator = batch_generator(validation_samples ,methods ,  batch_size=bs)
 
-X_sample,_ = next(train_generator_copy)
+X_sample,_ = next(train_generator_copy)[0]
 row, col, ch =  X_sample.shape
  
 #model
