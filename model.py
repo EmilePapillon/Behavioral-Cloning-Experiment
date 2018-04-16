@@ -108,9 +108,9 @@ def batch_generator(training_data_reference, methods_list, batch_size = 32):
 
                 if restart_flag: 
                     break
-            
-
+            if X_batch is not None :
                 yield X_batch, y_batch
+            else: restart_flag = True
             
             if restart_flag: 
                 break
@@ -124,18 +124,19 @@ methods = [grayscale, mirror, random_brightness,do_nothing]
 
 methods_index = np.array(range(len(methods)))
 
-left_right_images_offset = 1.2/10 #angle offset for left and right images in radians
+left_right_images_offset = 0.2 #1.2/10 #angle offset for left and right images in radians
 training_data_reference = shuffle(make_reference_list(methods_index,data,offset=left_right_images_offset))
 
 train_samples, validation_samples = train_test_split(training_data_reference, test_size= 0.2)
 
 bs = 32
-train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods ,batch_size=bs))
+#train_generator,train_generator_copy  = tee(batch_generator(train_samples , methods ,batch_size=bs))
+train_generator = batch_generator(train_samples, methods, batch_size=bs) 
 validation_generator = batch_generator(validation_samples ,methods ,  batch_size=bs)
 
-X_sample,_ = next(train_generator_copy)[0]
-row, col, ch =  X_sample.shape
- 
+#X_sample,_ = next(train_generator_copy)
+#row, col, ch =  X_sample[0].shape
+row, col, ch = 160, 320, 3 
 #model
 model = Sequential()
 model.add(Cropping2D(cropping = ((70,25),(0,0)),input_shape=(row,col,ch)))
