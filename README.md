@@ -26,7 +26,7 @@ The goals / steps of this project are the following:
 [image8]: ./images/grayscale.png "Grayscaled Image"
 [image9]: ./images/translation.png "Translated Image"
 [image10]: ./images/brightness.png "Brightness Image"
-[image11]: ./images/batch.png "Batch"
+[image11]: ./images/batch_example.png "Batch"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
