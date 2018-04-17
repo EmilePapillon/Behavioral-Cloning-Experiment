@@ -17,7 +17,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 from math import floor
-from itertools import tee
 
 # Data augmentation functions definitions
 def do_nothing(image,angle):
@@ -43,22 +42,20 @@ def random_translation(img, angle):
     p=10 #pad the image (reflect the boundary)
     tr_x = tx_range*np.random.uniform()-tx_range/2 #random number between -tx_range and +tx_range
     tr_y = ty_range*np.random.uniform()-ty_range/2
-    #tr_y=-5
     Trans_M = np.float32([[1,0,tr_x],[0,1,tr_y]])
     wrap = cv2.copyMakeBorder(img,p,p,p,p,0) #pads image with 10px uniform border
     img = cv2.warpAffine(wrap,Trans_M,(cols,rows))
-    #img = img[p:p+cols,p:p+rows]
     
     new_angle = angle + tr_x * 3.75e-4
     return img, new_angle 
 
-#return a list of tuples, each tuple containing path and angle for a training image, with the list of methods appended
+#refactor the pandas csv data : takes the data read by pandas, returns a list of dictionaries, each dictionary containing path and angle for a training image, with the list of methods yet unapplied
 def make_reference_list(methods_index, data, offset=0.2):
     paths= data.values[:,np.array([0,1,2])].reshape(-1) #flattened list containing center, left, right images paths
     angles = np.array([[center, left, right] for center, left, right in zip(data.values[:,3], data.values[:,3]+offset, data.values[:,3]-offset)]).reshape(-1) #flattened list of corresponding angles
     return [{'path':'../data/IMG/'+path.split('/')[-1], 'angle': angle, 'methods': methods_index} for path,angle in zip(paths,angles)]
 
-#picks a random element out of array, return the element and the updated numpy array
+#picks a specific element of the array, returns the element and the updated numpy array
 def pick(numpy_array,index):
     return numpy_array[index], np.delete(numpy_array, index)
 
@@ -113,6 +110,8 @@ def batch_generator(training_data_reference, methods_list, batch_size = 32):
             if restart_flag: 
                 break
 
+#variables and parameters for training : (tune the model here) 
+
 data_file = '../data/driving_log.csv'
 data = pd.read_csv(data_file, header= None, names = ['center', 'left', 'right', 'steering_angle', 'x','y','z'])
 
@@ -151,15 +150,17 @@ model.add(Dense(120))
 model.add(Dense(84))
 model.add(Dense(1))
 
+from keras.utils import plot_model
+plot_model(model, to_file='model.png')
+
 #train
 model.compile(loss='mse', optimizer='adam')
-
-#If the above code throw exceptions, try :
 batches_per_epoch = int(floor(len(train_samples)*len(methods)/bs))
 validation_batches_per_epoch = int(floor(len(validation_samples)*len(methods)/bs)) 
 history_object = model.fit_generator(train_generator, steps_per_epoch=batches_per_epoch, 
 validation_data=validation_generator, validation_steps=validation_batches_per_epoch, epochs=10, verbose = 1)
 
+#save
 model.save('../model.h5')
 
 
