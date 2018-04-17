@@ -23,9 +23,10 @@ The goals / steps of this project are the following:
 [image5]: ./images/model.png "Model"
 [image6]: ./images/normal.png "Normal Image"
 [image7]: ./images/flipped.png "Flipped Image"
-[image8]: ./images/grayscale.png "Flipped Image"
-[image9]: ./images/translation.png "Flipped Image"
-[image10]: ./images/brightness.png "Flipped Image"
+[image8]: ./images/grayscale.png "Grayscaled Image"
+[image9]: ./images/translation.png "Translated Image"
+[image10]: ./images/brightness.png "Brightness Image"
+[image10]: ./images/batch.png "Batch"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -153,3 +154,6 @@ After the collection process, I had 12639 number of data points (37917 images). 
 I finally randomly shuffled the data set and put 20% of the data into a validation set. 
 
 I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was 10 as evidenced by the figure above showing the evolution of the validation loss. I used an adam optimizer so that manually training the learning rate wasn't necessary.
+
+Here is an example of a training batch : 
+![alt text][image11]
